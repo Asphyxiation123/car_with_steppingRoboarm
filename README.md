@@ -1,4 +1,4 @@
-# car_with_stepperRpboarm
+# car_with_stepperRoboarm
 ## 1. what's this
 This is an course design in 2021,@YanShan University mechatronics engineering,
 本仓库存放着自己带机械臂的循迹寻迹小车代码，其借助点灯科技Blink还具有物联网功能。
