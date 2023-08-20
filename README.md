@@ -6,7 +6,7 @@ This is an course design in 2021,@YanShan University mechatronics engineering,
 代码主要分为两部分，即Stm32主控制机械结构+esp32上传数据至电灯科技构成物联网系统,分别使用C与C++编写。小车控制用STM32实现，机械臂示教、控制与小车状态显示用ESP32控制。
 ### 2.1 物联网组态界面框架
 其中物联网架构使用的是较为成熟的点灯科技自研的MQTT-UI界面通讯框架，使用方式与QT基本类似，相关资料见点灯科技官网官网。本此项目只要使用物联网组态界面进行小车所在节点实时同步与步进电机机械臂调试。
-`<video src="【07】视频图片/视频/蓝牙调试机械臂.mp4" controls></video>`
+<video src="【07】视频图片/视频/蓝牙调试机械臂.mp4" controls></video>
 
 
 ### 2.2小车框架
