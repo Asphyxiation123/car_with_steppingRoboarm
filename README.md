@@ -16,14 +16,14 @@ This is an course design in 2021,@YanShan University mechatronics engineering,
 机械部分图纸见`[03]二维图纸`，PCB电气部分图纸见`[06]嵌入式控制系统`的`电气原理图`部分。
 .
 .
+.1
+..1
 .
-..
+.1
+.1
 .
 .
-.
-.
-.
-.
+.1
 
 .
 .
