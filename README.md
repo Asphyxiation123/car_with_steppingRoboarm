@@ -14,22 +14,21 @@ This is an course design in 2021,@YanShan University mechatronics engineering,
 # 文件架构分析
 文件架构以在文件夹标题上有所体现，其中说明文档和介绍ppt可直接见`[01]文档材料`和`[02]PPT汇报`的最终版本，中间版本为进度汇报内容
 机械部分图纸见`[03]二维图纸`，PCB电气部分图纸见`[06]嵌入式控制系统`的`电气原理图`部分。
+.  
+.  
+  
+.  
+.1
+.1
 .
 .
 .1
-..1
-.
-.1
-.1
-.
-.
-.1
 
-.
-.
-.
-.
-.
+.  
+.  
+.  
+.  
+.  
 
 
 
@@ -58,6 +57,7 @@ This is an course design in 2021,@YanShan University mechatronics engineering,
 
 
 
+  
 
 
 
@@ -68,16 +68,16 @@ This is an course design in 2021,@YanShan University mechatronics engineering,
 
 
 
+  
 
 
 
+  
 
-
-
-
-
+  
 
 
 
 
 本课程设计的全部代码都由本人完成，真是见鬼，三个队友两个考研一个考公，我没猝死真是太好了。
+2022.8.21：抱歉，其实我并不想抱怨上述内容，因为实际情况愿彼此
