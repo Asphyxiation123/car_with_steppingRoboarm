@@ -1,232 +1,231 @@
+/*
+ * @Author: ChenJiaChen
+ * @Date: 2023-12-05 15:07:51
+ * @LastEditors: ChenJiaChen
+ * @LastEditTime: 2024-02-21 20:42:57
+ * @FilePath: \esp32_I2C2udp\src\main.cpp
+ * @Description: ÓÃÓÚ½«´®¿ÚÊı¾İ·¢ËÍÖÁUDP¿Í»§¶Ë
+ */
+
 #include <Arduino.h>
+#include <WiFi.h>
+#include <Wire.h>
+#include <stdio.h>
 
-/* *****************************************************************
+#define BufReceiveSize 40
+#define BUFFER_SIZE 4 * sizeof(uint32_t) + 10
 
-   Download latest Blinker library here:
-   https://github.com/blinker-iot/blinker-library/archive/master.zip
-
-
-   Blinker is a cross-hardware, cross-platform solution for the IoT.
-   It provides APP, device and server support,
-   and uses public cloud services for data transmission and storage.
-   It can be used in smart home, data monitoring and other fields
-   to help users build Internet of Things projects better and faster.
-
-   Make sure installed 2.7.4 or later ESP8266/Arduino package,
-   if use ESP8266 with Blinker.
-   https://github.com/esp8266/Arduino/releases
-
-   Make sure installed 1.0.5 or later ESP32/Arduino package,
-   if use ESP32 with Blinker.
-   https://github.com/espressif/arduino-esp32/releases
-
-   Docs: https://diandeng.tech/doc
+#define I2C_DEV_ADDR  0x01
 
 
- * *****************************************************************
+static const uint8_t sda_pin = 4;
+static const uint8_t scl_pin = 5;
 
-   Blinker åº“ä¸‹è½½åœ°å€:
-   https://github.com/blinker-iot/blinker-library/archive/master.zip
+const char *ssid = "CJC141";
+const char *password = "12345678";
+int i = 0;
+uint32_t orderIndex; // UDP½ÓÊÕµ½µÄÖ¸Áî
 
-   Blinker æ˜¯ä¸€å¥—è·¨ç¡¬ä»¶ã€è·¨å¹³å°çš„ç‰©è”ç½‘è§£å†³æ–¹æ¡ˆï¼Œæä¾›APPç«¯ã€è®¾å¤‡ç«¯ã€
-   æœåŠ¡å™¨ç«¯æ”¯æŒï¼Œä½¿ç”¨å…¬æœ‰äº‘æœåŠ¡è¿›è¡Œæ•°æ®ä¼ è¾“å­˜å‚¨ã€‚å¯ç”¨äºæ™ºèƒ½å®¶å±…ã€
-   æ•°æ®ç›‘æµ‹ç­‰é¢†åŸŸï¼Œå¯ä»¥å¸®åŠ©ç”¨æˆ·æ›´å¥½æ›´å¿«åœ°æ­å»ºç‰©è”ç½‘é¡¹ç›®ã€‚
+WiFiUDP Udp;
+IPAddress remote_IP(192, 168, 137, 1); // Ô¶³Ì¼à IP µØÖ·
+unsigned int remoteUdpPort = 8080;     // Ô¶³Ì¼àÌı¶Ë¿Úpc¶Ë¿Ú
 
-   å¦‚æœä½¿ç”¨ ESP8266 æ¥å…¥ Blinker,
-   è¯·ç¡®ä¿å®‰è£…äº† 2.7.4 æˆ–æ›´æ–°çš„ ESP8266/Arduino æ”¯æŒåŒ…ã€‚
-   https://github.com/esp8266/Arduino/releases
+uint32_t ReceiveBuf[BufReceiveSize];
+char Sendbuffer[BUFFER_SIZE];
+char incomingPacket[8];
+char SendtoPCbuffer[8];
+// uint32_t I2CSendbuf[2] = {365,24};//²âÊÔI2C·¢ËÍÖ¸Áî
+uint8_t I2CReceiveBuf[8];
+/*I2CÖ¸Áî±í
 
-   å¦‚æœä½¿ç”¨ ESP32 æ¥å…¥ Blinker,
-   è¯·ç¡®ä¿å®‰è£…äº† 1.0.5 æˆ–æ›´æ–°çš„ ESP32/Arduino æ”¯æŒåŒ…ã€‚
-   https://github.com/espressif/arduino-esp32/releases
+*/
 
-   æ–‡æ¡£: https://diandeng.tech/doc
+uint8_t singalframe;
+uint8_t Numframe = 40;
+// uint16_t endframe;
+uint32_t TmpCount = 0;
 
+// void onRequest(){
+//   Serial.println("onRequest");
+// }
 
- * *****************************************************************/
-
-
-
-//#define BLINKER_BLE  
-#define BLINKER_WIFI
-#define LED_BUILTIN 2
-
-#define outpin 4
-#define getinpin1 23
-
-
-#include <../lib/stepset.h>
-#include <AccelStepper.h>
-#include <Servo.h>
-
-// char auth[] = "2fa0d2a306bf";
-// char ssid[] = "konodioda";
-// char pswd[] = "23333333";
-
-
-Servo myservo;  // create servo object to control a servo 
-                // a maximum of eight servo objects can be created 
-
-
-
-//int16_t D1=0;int16_t D2=0;int16_t D3=0;
-int16_t getbig_deg1[2] = {22,22};
-int16_t getbig_deg2[2] = {47,75};
-int16_t getbig_deg3[2] = {27,27};
-
-int16_t savebig1_deg1[2] = {22,189};
-int16_t savebig1_deg2[2] = {30,36};
-int16_t savebig1_deg3[2] = {32,27};
-
-
-int16_t getsmall_deg1[2] = {189,-23};
-int16_t getsmall_deg2[2] = {8,107};
-int16_t getsmall_deg3[2] = {16,11};
-
-
-//int16_t savebig2_deg1;int16_t savebig2_deg2;int16_t savebig2_deg3;
-int16_t savesmall1_deg1[2] = {-23,208};
-int16_t savesmall1_deg2[2] = {0,22};
-int16_t savesmall1_deg3[2] = {40,19};
-//int16_t savesmall2_deg1;int16_t  savesmall2_deg2;int16_t  savesmall2_deg3;
-int16_t put_deg1[3] = {208,-4,-4};
-int16_t put_deg2[3] = {10,41,25};
-int16_t put_deg3[3] = {45,11,35};
-
-bool  button_on_flag=0;
-bool  button_re0_flag=0;
-uint8_t roboflag=2;
-//char state_axis[]="";
-
-
-// æŒ‰ä¸‹æŒ‰é”®å³ä¼šæ‰§è¡Œè¯¥å‡½æ•°
+// void OnReceive(int count){
+//   Serial.println("onReceive");
+//   for(int i = 0; i < count; i++)
+//   {
+//     I2CReceiveBuf[i] = Wire.read();
+//   }
+// }
 
 
 
 void setup()
 {
 
-  Serial.begin(115200);
-  //Blinker.begin(auth, ssid, pswd);
+  /*´®¿Ú0Îªµ÷ÊÔ´®¿Ú£¬´®¿Ú1ÎªÊı¾İ×ª»»´®¿Ú*/
+  Serial.begin(230400);
+  // Serial1.begin(115200);
+  Serial.setDebugOutput(true);
+
   
-  // Blinker.connect();
-  // delay(1000);
+  Serial1.begin(230400, SERIAL_8N1, /*rx =*/1, /*Tx =*/0);
+  
+  // /*I2C´Ó»ú³õÊ¼»¯*/
+  // Wire.onReceive(OnReceive);
+  // Wire.onRequest(onRequest);//µ±±»ĞèÒª½ÓÊÕÊı¾İÊ±½ÓÊÕÖĞ¶Ï»Øµ÷º¯Êı£¬slaveread
 
-  // åˆå§‹åŒ–æœ‰LEDçš„IO
-  pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(outpin, OUTPUT);
-  pinMode(getinpin1, INPUT);
+  /*I2CÖ÷»ú³õÊ¼»¯*/
 
-  digitalWrite(LED_BUILTIN, LOW);
-  digitalWrite(outpin, LOW);
-  // åˆå§‹åŒ–blinker
-  Motor_Setup();
 
-  myservo.attach(18);  // attaches the servo on pin 9 to the servo object 
-  myservo.write(78);
+  
+  Serial.println("Init_I2c");
+  
+  while (!Wire.begin(sda_pin, scl_pin, 100000)){
+    delay(100);
+    Serial.println("I2C device loading...");
+  }
+  //                                sda,scl
+  delay(100);
+  // Wire.setClock(100000); // ÉèÖÃI2CÊ±ÖÓÆµÂÊ
+  // Wire.begin(I2C_DEV_ADDR);
+  
+  
+
+  /*WIFI³õÊ¼»¯*/
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false); // ¹Ø±ÕSTAÄ£Ê½ÏÂwifiĞİÃß£¬Ìá¸ßÏìÓ¦ËÙ¶È
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(200);
+    Serial.print(".");
+  }
+  Serial.print("Connected, IP Address: ");
+  Serial.println(WiFi.localIP());
+  // ´òÓ¡WiFiUDP±¾µØ¶Ë¿ÚÓëIP
+
+  Udp.beginPacket(remote_IP, remoteUdpPort); // ÅäÖÃÔ¶¶ËipµØÖ·ºÍ¶Ë¿Ú
+  Udp.print("nihao\n");
+  Udp.endPacket(); // ·¢ËÍÊı¾İ
+
 }
 
-void loop() {
+void loop()
+{
+  // Serial.println(Serial1.available());
+  /*Ã¿´Î´®¿Ú½ÓÊÕ40¸öÕûÊı£¬½ÓÊÕÍêÁËÔÙÒ»²¢ÏòÍâ×ª·¢*/
+  if (Serial1.available() >= 0)
+  {
 
-  if(digitalRead(getinpin1)==1){
-    switch (roboflag)
+    Serial1.readBytes((uint8_t *)&singalframe, sizeof(singalframe));
+    Serial.print("frameis:");
+    Serial.println(singalframe);
+    // ½âÎösingalframeµÄÇ°16Î»ÊÇ·ñÎªÖ¡Í·ºÍºó16Î»´ú±íµÄÖ¡ÀàĞÍ
+    if (singalframe == 222) // ·¢ËÍÔ­ÉúÊı¾İ
     {
-    case 1:
-      while(digitalRead(getinpin1)==1)
+      // Serial1.readBytes((uint8_t *)&Numframe, sizeof(Numframe));
+      Serial.println("·¢ËÍÊı¾İ");
+      // Serial.println(Numframe);
+
+      // Serial1.readBytesUntil(0xBBBB, (uint8_t *)ReceiveBuf, sizeof(ReceiveBuf));
+      while (Serial1.available() >= sizeof(uint32_t) && TmpCount < Numframe )
       {
-        digitalWrite(LED_BUILTIN,HIGH);
-        delay(1000);
+        Serial1.readBytes((uint8_t *)&ReceiveBuf[TmpCount], sizeof(uint32_t));
+        TmpCount++;
       }
-
-      roboflag++;
-      digitalWrite(LED_BUILTIN,LOW);
-      break;
-
-    case 2://å–ç”¨ç‰©å—
-
-      while(digitalRead(getinpin1)==1)
-      {
-        digitalWrite(LED_BUILTIN,HIGH);
-        //æŠ“æ”¾å¤§åº•ç›˜
-        motor_run(getbig_deg1[0],getbig_deg2[0],getbig_deg3[0]);//æŠ“å¤§åº•ç›˜
-        //delay(500);
-        motor_run(getbig_deg1[1],getbig_deg2[1],getbig_deg3[1]);//æŠ“å¤§åº•ç›˜
-        //delay(500);
-        myservo.write(37);
-        delay(500);
-        motor_run(savebig1_deg1[0],savebig1_deg2[0],savebig1_deg3[0]);//æ”¾å¤§åº•ç›˜
-        //delay(500);
-        motor_run(savebig1_deg1[1],savebig1_deg2[1],savebig1_deg3[1]);//æ”¾å¤§åº•ç›˜
-        //delay(500);
-        myservo.write(78);
-        delay(500);
-
-        //æŠ“æ”¾å°ç‰©å—
-        motor_run(getsmall_deg1[0],getsmall_deg2[0],getsmall_deg3[0]);//æŠ“å°ç‰©å—
-        //delay(500);
-        motor_run(getsmall_deg1[1],getsmall_deg2[1],getsmall_deg3[1]);//æŠ“å°ç‰©å—
-        //delay(500);
-        myservo.write(0);
-        delay(500);
-        motor_run(savesmall1_deg1[0],savesmall1_deg2[0],savesmall1_deg3[0]);//æ”¾å°ç‰©å—
-        //delay(500);
-        motor_run(savesmall1_deg1[1],savesmall1_deg2[1],savesmall1_deg3[1]);//æ”¾å°ç‰©å—
-        //delay(500);
-        myservo.write(78);
-        delay(500);
-        //motor_run(savesmall1_deg1[1],savesmall1_deg2[1]-4,savesmall1_deg3[1]);//æ”¶å›ä¸€ç‚¹
-
-
-
-
-
-
-      }
-      roboflag++;
-      digitalWrite(LED_BUILTIN,LOW);
-      break;
-
-      case 3://æ”¾å›ç‰©å—
-
-      while(digitalRead(getinpin1)==1)
-      {
-
-        //æŠ“æ”¾å°ç‰©å—
-        myservo.write(0);
-        delay(500);
-        motor_run(put_deg1[0],put_deg2[0],put_deg3[0]);//æ”¾å°ç‰©å—
       
-        motor_run(put_deg1[1],put_deg2[1],put_deg3[1]);//æ”¾å°ç‰©å—
-       
-        myservo.write(77);
-        delay(500);
+      Serial.println("·¢ËÍÊı¾İ2");
+      
+      // Wire.slaveWrite((uint8_t*)I2CSendbuf, sizeof(I2CSendbuf));
+      
+      TmpCount = 0;
+      // Serial1.flush();
 
-     // motor_run(put_deg1[3],put_deg2[3],put_deg3[3]);//æ”¾å¤§åº•ç›˜
-        //æŠ“æ”¾å¤§åº•ç›˜
-        motor_run(put_deg1[2],put_deg2[2],put_deg3[2]);//æŠ“å¤§åº•ç›˜
-
-        motor_run(savebig1_deg1[1],savebig1_deg2[1],savebig1_deg3[1]);//æŠ“å¤§åº•ç›˜
-
-        myservo.write(37);
-        delay(500);
-        motor_run(189,put_deg2[0],put_deg3[0]);//æ”¾å¤§åº•ç›˜
-        motor_run(put_deg1[1],put_deg2[1],put_deg3[1]);//æ”¾å¤§åº•ç›˜
-        myservo.write(77);
-        delay(500);
-
-        motor_return_to_zero();
-
-        
+      // ´òÓ¡½ÓÊÕµ½µÄÊı¾İ
+      Udp.beginPacket(remote_IP, remoteUdpPort); // ÅäÖÃÔ¶¶ËipµØÖ·ºÍ¶Ë¿Ú
+      for (i = 0; i < Numframe/4; i++)
+      {
+        sprintf(Sendbuffer, "%d\n%d\n%d\n%d\n", (uint16_t)ReceiveBuf[i * 4], (uint16_t)ReceiveBuf[i * 4 + 1],
+                (uint16_t)ReceiveBuf[i * 4 + 2], (uint16_t)ReceiveBuf[i * 4 + 3]);
+        // Serial.print(Sendbuffer);
+        Udp.print(Sendbuffer); // °ÑÊı¾İĞ´Èë·¢ËÍ»º³åÇø
+        if(i == 4){
+          Udp.endPacket(); // ·¢ËÍÊı¾İ
+          Udp.beginPacket(remote_IP, remoteUdpPort); // ÅäÖÃÔ¶¶ËipµØÖ·ºÍ¶Ë¿Ú
+        }
+        // Çå¿ÕSendBufferÊı×éÀïµÄÄÚÈİ
       }
-      digitalWrite(LED_BUILTIN,LOW);
-        roboflag=4;
-        break;
-
-    default:
-      break;
+      Udp.endPacket(); // ·¢ËÍÊı¾İ
+      
     }
 
+    else if(singalframe == 208){
+      Serial.println("·¢ËÍÊı¾İ33333");
+      sprintf(SendtoPCbuffer, "%d\n", 0x43);
+      Udp.beginPacket(remote_IP, remoteUdpPort); // ÅäÖÃÔ¶¶ËipµØÖ·ºÍ¶Ë¿Ú
+      Udp.print(SendtoPCbuffer);
+      Udp.endPacket(); // ·¢ËÍÊı¾İ
+    }
+  }
+
+
+  // if (Wire.available())
+  // {
+  //   //¶ÁÈ¡8byteÊı¾İ
+  //   for (int i = 0; i < 8; i++)
+  //   {
+  //     I2CReceiveBuf[i] = Wire.read();
+  //   }
+  //   Serial.println("ÊÕµ½i2c×ÜÏßÊı¾İ");
+  // }
+
+  
+
+  //UDPÊı¾İ¼ì²â
+   Udp.beginPacket(remote_IP, remoteUdpPort); // ÅäÖÃÔ¶¶ËipµØÖ·ºÍ¶Ë¿Ú
+  // UDP½ÓÊÕÖ÷»úÊı¾İ²¢Ê¹ÓÃUDP·¢ËÍ»ØÖ÷»ú
+  if ( Udp.parsePacket() )                      //Èç¹ûÓĞÊı¾İÄÇÃ´Data_length²»Îª0£¬ÎŞÊı¾İData_lengthÎª0
+  {
+    int len = Udp.read(incomingPacket, sizeof(incomingPacket));  //¶ÁÈ¡Êı¾İ£¬½«Êı¾İ±£´æÔÚÊı×éincomingPacketÖĞ
+    Serial.println("UDPÊı¾İ½ÓÊÕ³É¹¦");
+
+    Wire.beginTransmission(12);  // Ïò´Ó»ú·¢ËÍÊı¾İ
+    Wire.write((uint8_t*)incomingPacket, sizeof(incomingPacket));
+    Wire.endTransmission();  // ½áÊøIICÍ¨Ñ¶
+
+
+    Serial1.print(incomingPacket);
+    uint32_t data1,data2;
+    // Serial.println(incomingPacket);
+    //UDP·¢ËÍ½ÓÊÕ×Ö·û
+ 
+    /*UDP½ÓÊÕµ÷ÊÔ*/
+    //data1ÎªincomingPacketÇ°4Î»×éºÏ¶ø³ÉµÄÊı
+    data1 = ((uint32_t)incomingPacket[0] << 24) | ((uint32_t)incomingPacket[1] << 16) | ((uint32_t)incomingPacket[2] << 8) | (uint32_t)incomingPacket[3];
+    //data2ÎªincomingPacketºó4Î»×éºÏ¶ø³ÉµÄÊı
+    data2 = ((uint32_t)incomingPacket[4] << 24) | ((uint32_t)incomingPacket[5] << 16) | ((uint32_t)incomingPacket[6] << 8) | (uint32_t)incomingPacket[7];
+    
+    char UDPsendOutbuffer[20];
+    sprintf(UDPsendOutbuffer,"data1:%d,data2:%d",data1,data2);
+    Serial.println(UDPsendOutbuffer);
+    
     
 
+
+
+    Udp.print("receive:");
+
+    // Udp.print(incomingPacket);                    // °ÑÊı¾İĞ´Èë·¢ËÍ»º³åÇø
+    
+    Udp.print(UDPsendOutbuffer);                    // °ÑÊı¾İĞ´Èë·¢ËÍ»º³åÇø
+    // Udp.print("data1:");Udp.println(data1);
+    
+    
+    // Udp.print("data2:");Udp.println(data2);
+
+    Udp.endPacket(); // ·¢ËÍÊı¾İ
   }
+  Udp.endPacket(); 
+  // delay(500);
 }
